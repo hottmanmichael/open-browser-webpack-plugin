@@ -1,4 +1,9 @@
 var opn = require('opn');
+var execSync = require('child_process').execSync;
+
+// https://github.com/sindresorhus/opn#app
+var OSX_CHROME = 'google chrome';
+
 
 /**
  * Creates a function that is restricted to invoking func once.
@@ -34,19 +39,40 @@ function OpenBrowserPlugin(options) {
   this.ignoreErrors = options.ignoreErrors;
 }
 
+function attemptToOpenBrowser() {
+  var url = this.url;
+  var userBrowser = this.browser;
+  
+  const shouldTryOpenChromeWithAppleScript =
+    process.platform === 'darwin' &&
+    (typeof browser !== 'string' || browser === OSX_CHROME);
+  
+  if (shouldTryOpenChromeWithAppleScript) {
+    try {
+      // Try our best to reuse existing tab
+      // on OS X Google Chrome with AppleScript
+      execSync('ps cax | grep "Google Chrome"');
+      execSync('osascript openChrome.applescript "' + encodeURI(url) + '"', {
+        cwd: __dirname,
+        stdio: 'ignore',
+      });
+      return true;
+    } catch (err) {
+      // Ignore errors.
+    }
+  }
+  
+  // If opening a new tab in Chrome fails, use fallback
+  opn(url, {app: userBrowser}).catch((err) => { throw err });
+}
+
 OpenBrowserPlugin.prototype.apply = function(compiler) {
   var isWatching = false;
-  var url = this.url;
   var delay = this.delay;
-  var browser = this.browser;
   var ignoreErrors = this.ignoreErrors;
+  var self = this;
   var executeOpen = once(function() {
-    setTimeout(function () {
-      opn(url, {app: browser})
-      .catch((err) => {
-        throw err
-      });
-    }, delay);
+    setTimeout(attemptToOpenBrowser.bind(self), delay);
   });
 
   compiler.plugin('watch-run', function checkWatchingMode(watching, done) {
