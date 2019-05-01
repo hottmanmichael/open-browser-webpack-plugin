@@ -74,17 +74,26 @@ OpenBrowserPlugin.prototype.apply = function(compiler) {
   var executeOpen = once(function() {
     setTimeout(attemptToOpenBrowser.bind(self), delay);
   });
-
-  compiler.plugin('watch-run', function checkWatchingMode(watching, done) {
+  
+  const checkWatchingMode = (watching, done) => {
     isWatching = true;
     done();
-  });
-
-  compiler.plugin('done', function doneCallback(stats) {
+  }
+  
+  const doneCallback = stats => {
     if (isWatching && (!stats.hasErrors() || ignoreErrors)) {
       executeOpen();
     }
-  });
+  } 
+  
+  if (compiler.hooks) {
+    const plugin = { name: 'OpenBrowserPlugin' };
+    compiler.hooks.watchRun.tap(plugin, checkWatchingMode);
+    compiler.hooks.done.tap(plugin, doneCallback);
+  } else {
+    compiler.plugin('watch-run', checkWatchingMode);
+    compiler.plugin('done', doneCallback)
+  } 
 };
 
 module.exports = OpenBrowserPlugin;
