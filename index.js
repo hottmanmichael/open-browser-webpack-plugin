@@ -41,7 +41,7 @@ function OpenBrowserPlugin(options) {
 
 function attemptToOpenBrowser() {
   var url = this.url;
-  var userBrowser = this.browser;
+  var browser = this.browser;
   
   const shouldTryOpenChromeWithAppleScript =
     process.platform === 'darwin' &&
@@ -63,7 +63,7 @@ function attemptToOpenBrowser() {
   }
   
   // If opening a new tab in Chrome fails, use fallback
-  opn(url, {app: userBrowser}).catch((err) => { throw err });
+  opn(url, {app: browser}).catch((err) => { throw err });
 }
 
 OpenBrowserPlugin.prototype.apply = function(compiler) {
