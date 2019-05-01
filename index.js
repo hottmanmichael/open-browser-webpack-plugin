@@ -4,7 +4,6 @@ var execSync = require('child_process').execSync;
 // https://github.com/sindresorhus/opn#app
 var OSX_CHROME = 'google chrome';
 
-
 /**
  * Creates a function that is restricted to invoking func once.
  * Repeat calls to the function return the value of the first invocation.
@@ -19,7 +18,7 @@ function once(fn) {
       called = true;
       fn.apply(this, arguments);
     }
-  }
+  };
 }
 
 /**
@@ -42,11 +41,11 @@ function OpenBrowserPlugin(options) {
 function attemptToOpenBrowser() {
   var url = this.url;
   var browser = this.browser;
-  
+
   const shouldTryOpenChromeWithAppleScript =
     process.platform === 'darwin' &&
     (typeof browser !== 'string' || browser === OSX_CHROME);
-  
+
   if (shouldTryOpenChromeWithAppleScript) {
     try {
       // Try our best to reuse existing tab
@@ -61,9 +60,11 @@ function attemptToOpenBrowser() {
       // Ignore errors.
     }
   }
-  
+
   // If opening a new tab in Chrome fails, use fallback
-  opn(url, {app: browser}).catch((err) => { throw err });
+  opn(url, { app: browser }).catch(err => {
+    throw err;
+  });
 }
 
 OpenBrowserPlugin.prototype.apply = function(compiler) {
@@ -74,26 +75,28 @@ OpenBrowserPlugin.prototype.apply = function(compiler) {
   var executeOpen = once(function() {
     setTimeout(attemptToOpenBrowser.bind(self), delay);
   });
-  
+
   const checkWatchingMode = (watching, done) => {
     isWatching = true;
-    done();
-  }
-  
+    if (done && done.call) {
+      done();
+    } else return true;
+  };
+
   const doneCallback = stats => {
     if (isWatching && (!stats.hasErrors() || ignoreErrors)) {
       executeOpen();
     }
-  } 
-  
+  };
+
   if (compiler.hooks) {
     const plugin = { name: 'OpenBrowserPlugin' };
     compiler.hooks.watchRun.tap(plugin, checkWatchingMode);
     compiler.hooks.done.tap(plugin, doneCallback);
   } else {
     compiler.plugin('watch-run', checkWatchingMode);
-    compiler.plugin('done', doneCallback)
-  } 
+    compiler.plugin('done', doneCallback);
+  }
 };
 
 module.exports = OpenBrowserPlugin;
